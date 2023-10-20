@@ -1,0 +1,1776 @@
+openapi: 3.0.3
+info:
+  title: API CANEL - (Cartographie des applications nationales et locales)
+  description: "Cette API a pour but de présenter et gérer les informations du patrimoine de systèmes d'informations d'un organisme"
+  contact:
+    email: contact-equipe-api@interieur.gouv.fr
+  license:
+    name: Licence non soumise à contrôle
+  version: 2.0.0
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/YMLESAUX_1/CANEL/1.0.0
+  - url: http://localhost:3000/canel/v1
+
+################################################################################
+# Principes d'utilisation de l'API CANEL
+#-------------------------------------------------------------------------------
+# Lorsqu'un objet contient des objets enfants, ceux-ci se limiteront en lecture
+# à leur identifiant et les éléments identifiants pour un utilisateur (nom,
+# statut, ...)
+# En création, les données transmises sur les enfants seront limitées autant que
+# possible.
+################################################################################
+# Non traité dans cette version de l'API
+#-------------------------------------------------------------------------------
+# - Responsabilités associées aux zones d'urbanisme
+# - Gestion de projets
+# - Gestion de portefeuilles
+# - Interfaces applications
+################################################################################
+
+paths:
+    /applications:
+        get:
+            tags:
+                - applications
+            summary: recherche d'une ou plusieurs applications
+            parameters:
+                - name: nom
+                  description: "Nom de l'application ou du composant applicatif"
+                  in: query
+                  schema:
+                    type: string
+                - name: organisation
+                  description: "code court de l'organisation propriétaire de l'application"
+                  in: query
+                  schema:
+                    type: string
+                - name: sensibilite
+                  description: "sensibilité de l'application au regard de l'organisme"
+                  in: query
+                  schema:
+                    $ref: '#/components/schemas/applicationSensibilite'
+                - name: statut
+                  description: "statut de l'application: de 'en construction' jusqu'à 'décommissionnée'"
+                  in: query
+                  schema:
+                    $ref: '#/components/schemas/applicationStatut'
+                - name: code
+                  description: "code de l'application dans un référentiel tiers (exemple: API)"
+                  example: '{"type": "PAI", "codeCourt": "CAN"}'
+                  in: query
+                  schema:
+                    $ref: '#/components/schemas/applicationCode'
+                - name: sort
+                  in: query
+                  description: 'Tri du résultat obtenu'
+                  schema:
+                    type: array
+                    items:
+                      type: string
+                      enum: 
+                        - nom
+                        - sensibilite
+                        - statut
+                - name: offset
+                  in: query
+                  description: 'début de la pagination'
+                  schema:
+                    type: integer
+                    minimum: 1
+                    default: 1
+                - name: limit
+                  in: query
+                  description: 'nombre application max par page'
+                  schema:
+                    type: integer
+                    minimum: 10
+                    maximum: 50
+                    default: 20
+            responses:
+              200:
+                description: applications trouvées répondant aux critères
+                content:
+                  application/json:
+                    schema:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/application'
+              206:
+                description: reponse partielle
+                content:
+                  application/json:
+                    schema:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/application'
+              400:
+                description: format incorrect
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              401:
+                description: non autorisé
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              402:
+                description: paramètres non valides
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              404:
+                description: URI incorrecte
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              500:
+                description: erreur technique
+                content: {}
+            
+        post:
+            tags:
+                - applications
+            summary: "création d'une nouvelle application"
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/application'
+                required: true
+            responses:
+                201:
+                    description: création réussie
+                    content:
+                        application/json:
+                            schema:
+                                type: string
+                                format: uuid
+                                description: identifiant interne de l'application créée
+                400:
+                    description: format incorrect
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                401:
+                    description: non autorisé
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                402:
+                    description: paramètres incorrects
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                409:
+                    description: conflit doublon potentiel
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                500:
+                    description: erreur technique
+    /applications/{idApplication}:
+        put:
+            tags:
+                - applications
+            summary: modification d'une application
+            parameters:
+                - name: idApplication
+                  in: path
+                  description: identifiant interne de l'application
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                          $ref: '#/components/schemas/application'
+            responses:
+                200:
+                    description: mise à jour réussie
+                    content:
+                        application/json:
+                            schema:
+                              type: string
+                              format: uuid
+                              description: identifiant interne de l'application mise à jour
+                400:
+                    description: format incorrect
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                401:
+                    description: non autorisé
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                402:
+                    description: paramètres incorrects
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                409:
+                    description: conflit doublon potentiel
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                500:
+                    description: erreur technique
+        get:
+            tags:
+                - applications
+            summary: recherche d'une application par son identifiant
+            parameters:
+                - name: idApplication
+                  in: path
+                  description: identifiant interne de l'application
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            responses:
+                200:
+                  description: application trouvée
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/application'
+                400:
+                  description: format incorrect
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                401:
+                  description: non autorisé
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                402:
+                  description: Paramètres incorrects
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                404:
+                  description: URI Incorrecte
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                500:
+                  description: erreur technique
+                  content: {}
+    /organisations:
+      get:
+        tags:
+          - organisations
+        summary: recherche d'un ou plusieurs organismes
+        parameters:
+          - name: label
+            description: nom de l'organisme
+            example: "Ministère de l'Intérieur et de l'Outre-Mer"
+            in: query
+            schema:
+              type: string
+          - name: code
+            description: code de l'organisme
+            example: "MIOM"
+            in: query
+            schema:
+              type: string
+        responses:
+          200:
+            description: organismes trouvés répondant aux critères
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/organisation'
+          206:
+            description: reponse partielle
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/organisation'
+          400:
+            description: format incorrect
+            content:
+              application/json:
+                schema:
+                 $ref: '#/components/schemas/errorMessage'
+          401:
+            description: non autorisé
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          402:
+            description: paramètres incorrects
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          404:
+            description: URI incorrecte
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          500:
+            description: erreur technique
+            content: {}
+      post:
+        tags:
+          - organisations
+        summary: création d'un nouvelle unité organisationnelle
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/organisation'
+          required: true
+        responses:
+          201:
+            description: création réussie
+            content:
+              application/json:
+                schema:
+                  type: string
+                  format: uuid
+                  description: identifiant interne de l'organisation créée
+          400:
+            description: format incorrect
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          401:
+            description: non autorisé
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          402:
+            description: paramètres incorrects
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          409:
+            description: conflit doublon potentiel
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          500:
+            description: erreur technique
+    /organisations/{idOrganisation}:
+        put:
+            tags:
+                - organisations
+            summary: modification d'un organisme
+            parameters:
+                - name: idOrganisation
+                  in: path
+                  description: identifiant interne de l'organisation
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                          $ref: '#/components/schemas/organisation'
+            responses:
+                200:
+                    description: mise à jour réussie
+                    content:
+                        application/json:
+                            schema:
+                              type: string
+                              format: uuid
+                              description: identifiant interne de l'organisation mise à jour
+                400:
+                    description: format incorrect
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                401:
+                    description: non autorisé
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                402:
+                  description: paramètres incorrects
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                409:
+                    description: conflit doublon potentiel
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/errorMessage'
+                500:
+                    description: erreur technique
+                    content: {}
+        get:
+            tags:
+                - organisations
+            summary: recherche d'une organisation par son identifiant
+            parameters:
+                - name: idOrganisation
+                  in: path
+                  description: identifiant interne de l'organisation
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            responses:
+                200:
+                  description: organisation trouvé
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/organisation'
+                400:
+                  description: format incorrect
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                401:
+                  description: non autorisé
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                402:
+                  description: paramètres incorrects
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                404:
+                  description: identifiant inconnu
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                500:
+                  description: erreur technique
+                  content: {}
+
+    # 2023-09-15 : nous ne créons pas tout de suite le path /acteurs, car la création
+    # d'un acteur est faite par l'intermédiaire des objets applications, et que la gestion
+    # d'un ensemble d'acteurs est aussi faite par les objets applications, voire organisme.
+    /acteurs/{idActeur}:
+      put:
+          tags:
+              - acteurs
+          summary: modification d'un acteur
+          parameters:
+              - name: idActeur
+                in: path
+                description: identifiant interne de l'acteur
+                required: true
+                schema:
+                  type: string
+                  format: uuid
+          requestBody:
+              content:
+                  application/json:
+                      schema:
+                        $ref: '#/components/schemas/acteur'
+          responses:
+              200:
+                  description: "acteur mis à jour"
+                  content:
+                      application/json:
+                          schema:
+                            type: string
+                            format: uuid
+              400:
+                  description: format incorrect
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              401:
+                  description: non autorisé
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              402:
+                description: paramètres incorrects
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              409:
+                  description: conflit doublon potentiel
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              500:
+                  description: erreur technique
+                  content: {}
+    
+      get:
+            tags:
+                - acteurs
+            summary: recherche d'un acteur par son identifiant
+            parameters:
+                - name: idActeur
+                  in: path
+                  description: identifiant interne de l'acteur
+                  required: true
+                  schema:
+                    type: string
+                    format: uuid
+            responses:
+                200:
+                  description: acteur trouvé
+                  content:
+                    application/json:
+                      schema:
+                        type: array
+                        items:
+                            $ref: '#/components/schemas/acteur'
+                400:
+                  description: format incorrect
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                401:
+                  description: non autorisé
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                402:
+                  description: paramètres incorrects
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                404:
+                  description: identifiant inconnu
+                  content:
+                    application/json:
+                      schema:
+                        $ref: '#/components/schemas/errorMessage'
+                500:
+                  description: erreur technique
+                  content: {}
+
+    /environnements:
+      get:
+          tags:
+              - environnements
+          summary: recherche d'un ou plusieurs environnements
+          parameters:
+              - name: label
+                description: "label de l'environnement"
+                in: query
+                schema:
+                  type: string
+              - name: statut
+                description: "statut des environnements"
+                in: query
+                schema:
+                  $ref: '#/components/schemas/statutEnvironnement'
+              - name: type
+                description: "type d'environnement"
+                in: query
+                schema: 
+                  $ref: '#/components/schemas/typeEnvironnement'
+              - name: sort
+                in: query
+                description: 'Tri du résultat obtenu'
+                schema:
+                  type: array
+                  items:
+                    type: string
+                    enum: 
+                      - label
+                      - protection
+                      - statut
+              - name: offset
+                in: query
+                description: 'début de la pagination'
+                schema:
+                  type: integer
+                  minimum: 1
+                  default: 1
+              - name: limit
+                in: query
+                description: 'nombre application max par page'
+                schema:
+                  type: integer
+                  minimum: 10
+                  maximum: 50
+                  default: 20
+          responses:
+            200:
+              description: environnements trouvés répondant aux critères
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/environnement'
+            206:
+              description: reponse partielle
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/environnement'
+            400:
+              description: format incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            401:
+              description: non autorisé
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            402:
+              description: paramètres non valides
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            404:
+              description: URI incorrecte
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            500:
+              description: erreur technique
+              content: {}
+
+      post:
+        tags:
+          - environnements
+        summary: création d'un nouvel environnement
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/environnement'
+          required: true
+        responses:
+          201:
+            description: création réussie
+            content:
+              application/json:
+                schema:
+                  type: string
+                  format: uuid
+                  description: identifiant interne de l'environnement créé
+          400:
+            description: format incorrect
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          401:
+            description: non autorisé
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          402:
+            description: paramètres incorrects
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          409:
+            description: conflit doublon potentiel
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          500:
+            description: erreur technique
+
+    /environnements/{idEnvironnement}:
+      put:
+          tags:
+              - environnements
+          summary: modification d'un environnement
+          parameters:
+              - name: idEnvironnement
+                in: path
+                description: identifiant interne de l'environnement
+                required: true
+                schema:
+                  type: string
+                  format: uuid
+          requestBody:
+              content:
+                  application/json:
+                      schema:
+                        $ref: '#/components/schemas/environnement'
+          responses:
+              200:
+                  description: "environnement mis à jour"
+                  content:
+                      application/json:
+                          schema:
+                            type: string
+                            format: uuid
+              400:
+                  description: format incorrect
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              401:
+                  description: non autorisé
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              402:
+                description: paramètres incorrects
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              409:
+                  description: conflit doublon potentiel
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              500:
+                  description: erreur technique
+                  content: {}
+      
+      get:
+        tags:
+            - environnements
+        summary: recherche d'un environnement par son identifiant
+        parameters:
+            - name: idEnvironnement
+              in: path
+              description: identifiant interne de l'environnement
+              required: true
+              schema:
+                type: string
+                format: uuid
+        responses:
+            200:
+              description: environnement trouvé
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/environnement'
+            400:
+              description: format incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            401:
+              description: non autorisé
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            402:
+              description: paramètres incorrects
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            404:
+              description: identifiant inconnu
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            500:
+              description: erreur technique
+              content: {}
+
+    /capacites:
+      get:
+          tags:
+              - capacites
+          summary: recherche d'une ou plusieurs capacités
+          parameters:
+              - name: desription
+                description: "tout ou partie de la description des capacités"
+                in: query
+                schema:
+                  type: string
+              - name: sort
+                in: query
+                description: 'Tri du résultat obtenu'
+                schema:
+                  type: array
+                  items:
+                    type: string
+                    enum: 
+                      - description
+              - name: offset
+                in: query
+                description: 'début de la pagination'
+                schema:
+                  type: integer
+                  minimum: 1
+                  default: 1
+              - name: limit
+                in: query
+                description: 'nombre capacités max par page'
+                schema:
+                  type: integer
+                  minimum: 10
+                  maximum: 50
+                  default: 20
+          responses:
+            200:
+              description: capacités trouvés répondant aux critères
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/capacite'
+            206:
+              description: reponse partielle
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/capacite'
+            400:
+              description: format incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            401:
+              description: non autorisé
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            402:
+              description: paramètres non valides
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            404:
+              description: URI incorrecte
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            500:
+              description: erreur technique
+              content: {}
+
+      post:
+        tags:
+          - capacites
+        summary: création d'une nouvelle capacité
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/capacite'
+          required: true
+        responses:
+          201:
+            description: création réussie
+            content:
+              application/json:
+                schema:
+                  type: string
+                  format: uuid
+                  description: identifiant interne de la capacité créée
+          400:
+            description: format incorrect
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          401:
+            description: non autorisé
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          402:
+            description: paramètres incorrects
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          409:
+            description: conflit doublon potentiel
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          500:
+            description: erreur technique
+
+    /capacites/{idCapacite}:
+      put:
+          tags:
+              - capacites
+          summary: modification d'une capacité
+          parameters:
+              - name: idCapacite
+                in: path
+                description: identifiant interne d'une capacité'
+                required: true
+                schema:
+                  type: string
+                  format: uuid
+          requestBody:
+              content:
+                  application/json:
+                      schema:
+                        $ref: '#/components/schemas/capacite'
+          responses:
+              200:
+                  description: "capacité mis à jour"
+                  content:
+                      application/json:
+                          schema:
+                            type: string
+                            format: uuid
+              400:
+                  description: format incorrect
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              401:
+                  description: non autorisé
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              402:
+                description: paramètres incorrects
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              409:
+                  description: conflit doublon potentiel
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              500:
+                  description: erreur technique
+                  content: {}
+      
+      get:
+        tags:
+            - capacites
+        summary: recherche d'une capacité par son identifiant
+        parameters:
+            - name: idCapacite
+              in: path
+              description: identifiant interne de la capacité
+              required: true
+              schema:
+                type: string
+                format: uuid
+        responses:
+            200:
+              description: capacité trouvée
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/capacite'
+            400:
+              description: format incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            401:
+              description: non autorisé
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            402:
+              description: paramètres incorrects
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            404:
+              description: identifiant inconnu
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            500:
+              description: erreur technique
+              content: {}
+
+    /zonesUrbanisme:
+      get:
+          tags:
+              - zones urbanisme
+          summary: recherche d'une ou plusieurs zones d'urbanisme
+          parameters:
+              - name: label
+                description: "tout ou partie du label ou de la description d'une zone d'urbanisme"
+                in: query
+                schema:
+                  type: string
+              - name: sort
+                in: query
+                description: 'Tri du résultat obtenu'
+                schema:
+                  type: array
+                  items:
+                    type: string
+                    enum: 
+                      - label
+              - name: offset
+                in: query
+                description: 'début de la pagination'
+                schema:
+                  type: integer
+                  minimum: 1
+                  default: 1
+              - name: limit
+                in: query
+                description: 'nombre capacités max par page'
+                schema:
+                  type: integer
+                  minimum: 10
+                  maximum: 50
+                  default: 20
+          responses:
+            200:
+              description: zones d'urbanisme trouvées répondant aux critères
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/zoneUrbanisme'
+            206:
+              description: reponse partielle
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/zoneUrbanisme'
+            400:
+              description: format incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            401:
+              description: non autorisé
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            402:
+              description: paramètres non valides
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            404:
+              description: URI incorrecte
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            500:
+              description: erreur technique
+              content: {}
+
+      post:
+        tags:
+          - zones urbanisme
+        summary: création d'une nouvelle zone d'urbanisme
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zoneUrbanisme'
+          required: true
+        responses:
+          201:
+            description: création réussie
+            content:
+              application/json:
+                schema:
+                  type: string
+                  format: uuid
+                  description: identifiant interne de la zone d'urbanisme créée
+          400:
+            description: format incorrect
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          401:
+            description: non autorisé
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          402:
+            description: paramètres incorrects
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          409:
+            description: conflit doublon potentiel
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          500:
+            description: erreur technique
+
+    /zonesUrbanisme/{idZoneUrba}:
+      put:
+          tags:
+              - zones urbanisme
+          summary: modification d'une capacité
+          parameters:
+              - name: idZoneUrba
+                in: path
+                description: identifiant interne d'une zone d'urbanisme
+                required: true
+                schema:
+                  type: string
+                  format: uuid
+          requestBody:
+              content:
+                  application/json:
+                      schema:
+                        $ref: '#/components/schemas/zoneUrbanisme'
+          responses:
+              200:
+                  description: "zone d'urbanisme mis à jour"
+                  content:
+                      application/json:
+                          schema:
+                            type: string
+                            format: uuid
+              400:
+                  description: format incorrect
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              401:
+                  description: non autorisé
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              402:
+                description: paramètres incorrects
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/errorMessage'
+              409:
+                  description: conflit doublon potentiel
+                  content:
+                      application/json:
+                          schema:
+                              $ref: '#/components/schemas/errorMessage'
+              500:
+                  description: erreur technique
+                  content: {}
+      
+      get:
+        tags:
+            - zones urbanisme
+        summary: recherche d'une zone d'urbanisme par son identifiant
+        parameters:
+            - name: idZoneUrba
+              in: path
+              description: identifiant interne de la zone d'urbanisme
+              required: true
+              schema:
+                type: string
+                format: uuid
+        responses:
+            200:
+              description: zone d'urbanisme trouvée
+              content:
+                application/json:
+                  schema:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/zoneUrbanisme'
+            400:
+              description: format incorrect
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            401:
+              description: non autorisé
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            402:
+              description: paramètres incorrects
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            404:
+              description: identifiant inconnu
+              content:
+                application/json:
+                  schema:
+                    $ref: '#/components/schemas/errorMessage'
+            500:
+              description: erreur technique
+              content: {}
+    /healthcheck:
+      get:
+        tags:
+        - observabilite
+        summary: precise l'etat de sante de l'api jusqu'à la base de données
+        operationId: healthcheck
+        responses:
+          200:
+            description: OK
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    etat:
+                      type: string
+                      description: indique si la base est connectee ou deconnectee
+                    date:
+                      type: string
+                      description: indique la date système de la demande
+          400:
+            description: format incorrect
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/errorMessage'
+          500:
+            description: erreur technique
+            content: {}
+components:
+    schemas:
+        application:
+            description: système applicatif, application ou composant applicatif
+            required:
+                - nomApplication
+                - description
+                - statut
+            type: object
+            properties:
+                idApplication:
+                    description: identifiant CANEL2 de l'application
+                    type: string
+                    format: uuid
+                nomApplication:
+                    type: string
+                    description: nom unique de l'application
+                description:
+                    type: string
+                    description: description de l'objet de l'application
+                statut:
+                    $ref: '#/components/schemas/applicationStatut'
+                organisation:
+                    type: string
+                    description: organisation responsable de l'application
+                sensibilite:
+                    $ref: '#/components/schemas/applicationSensibilite'
+                typeApplication:
+                    $ref: '#/components/schemas/applicationType'
+                codeApplication:
+                    type: array
+                    items: 
+                      $ref: '#/components/schemas/applicationCode'
+                parentApplication:
+                  allOf:
+                    - description: "Application parente: dans un contexte GET: les données minimum requises pour les objets applications sont: id, nom, description et statut; dans un contexte de PUT ou POST, les données minimum requises sont les identifiants"
+                    - $ref: '#/components/schemas/application'
+                enfantsApplication:
+                  description: "Sous-application: dans un contexte GET: les données minimum requises pour les objets applications sont: id, nom, description et statut; dans un contexte de PUT ou POST, les données minimum requises sont les identifiants"
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/application'
+                acteurRoles:
+                    description: rôles associés à une application, et acteurs/organisations les portant. Les données minimum pour un acteur sont son email. Les données minimum pour une organisation sont son code.
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            acteur:
+                              $ref: '#/components/schemas/acteur'
+                            organisation:
+                              $ref: '#/components/schemas/organisation'
+                            role:
+                              $ref: '#/components/schemas/applicationRole'
+                            dateValidite:
+                              type: string
+                              format: date
+                fluxSortant:
+                    description: flux d'échanges initiés par l'application décrite
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            targetApplication:
+                                $ref: '#/components/schemas/application'
+                            targetOrganisation:
+                                $ref: '#/components/schemas/organisation'
+                            middleware:
+                                description: composants intermédiaires utilisés pour établir le flux (API GW, FW, ...)
+                                type: string
+                            typeFlux:
+                                type: string    # Table de référence: APP_FlowType
+                            protocoleFlux:
+                                type: string    # Table de reference: APP_FlowProtocol
+                            periodicite:
+                                type: string    # Table de référence: APP_FlowPeriod
+                            orientationDonnee:
+                              $ref: '#/components/schemas/flowDataOrientation'
+                            ports:
+                                type: string
+                            statut:
+                              $ref: '#/components/schemas/flowStatus'
+                fluxEntrant:
+                    description: flux d'échanges reçus par l'application décrite
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            sourceApplication:
+                                $ref: '#/components/schemas/application'
+                            sourceOrganisation:
+                                $ref: '#/components/schemas/organisation'
+                            middleware:
+                                type: string
+                                description: composants intermédiaires utilisés pour établir le flux (API GW, FW, ...)
+                            typeFlux:
+                                type: string    # Table de référence: APP_FlowType
+                            protocoleFlux:
+                                type: string    # Table de reference: APP_FlowProtocol
+                            periodicite:
+                                type: string    # Table de référence: APP_FlowPeriod
+                            orientationDonnee:
+                              $ref: '#/components/schemas/flowDataOrientation'
+                            ports:
+                                type: string
+                            statut:
+                              $ref: '#/components/schemas/flowStatus'
+                instances:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/instance'
+                capacites:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/capacite'
+                zonesUrbanisme:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/zoneUrbanisme'
+                conformite:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/conformiteApplication'
+        organisation:
+          type: object
+          properties:
+            idOrganisation:
+              type: string
+              format: uuid
+              description: Identifiant interne de l'unité organisationnelle
+            codeOrganisation:
+              type: string
+              description: code court de l'organisation
+              example: MIOM
+            label:
+              type: string
+              description: nom long de l'unité organisationnelle
+              example: Ministère de l'Intérieur et des Outre-Mers
+            description:
+              type: string
+              description: description de l'unité organisationnelle
+            parentOrganisation:
+              $ref: '#/components/schemas/organisation'
+            enfantsOrganisation:
+              type: array
+              items:
+                $ref: '#/components/schemas/organisation'
+            acteurs:  # TODO: à remplacer par structure acteur
+              type: array
+              items:
+                $ref: '#/components/schemas/acteur'
+            applications:
+              type: array
+              items:
+                $ref: '#/components/schemas/application'
+        acteur:
+          type: object
+          description: acteur physique membre de ou agissant au nom d'une organisation
+          properties:
+            idActeur:
+              type: string
+              format: uuid
+            nomActeur:
+              type: string
+            email:
+              type: string
+              format: email
+              example: arthur.dupont@toto.fr
+            dateValidation:
+              type: string
+              format: date
+            organisme:
+              $ref: '#/components/schemas/organisation'
+            codesActeur:
+              type: array
+              items:
+                type: object
+                properties:
+                  typeCode:
+                    type: string    # Table de référence: ACT_ActorCodeType
+                  valeurCode:
+                    type: string
+            rolesApplications:
+              type: array
+              items:
+                type: object
+                properties:
+                  application:
+                    $ref: '#/components/schemas/application'
+                  role:
+                    $ref: '#/components/schemas/role'
+        role:
+          description: rôle associés à une application, et acteurs/organisations les portant
+          type: object
+          properties:
+              acteur:
+                $ref: '#/components/schemas/acteur'
+              organisation:
+                $ref: '#/components/schemas/organisation'
+              role:
+                $ref: '#/components/schemas/applicationRole'
+              dateValidite:
+                type: string
+                format: date
+        applicationCode:
+          type: object
+          properties:
+            typeCode:
+              $ref: '#/components/schemas/applicationCodeType'
+            codeCourt:
+              type: string
+            codeLong:
+              type: string
+        environnement:
+          description: un environnement est un espace réel ou abstrait où une application peut être instanciée. Il peut s'agir d'un data center, d'un cluster Cloud PI Native, ou d'un poste NOEMIE (abstrait)
+          type: object
+          properties:
+            idEnvironnement:
+              type: string
+              format: uuid
+            label:
+              type: string
+            organisation:
+              description: nom de l'organisation gérant l'environnement. Distinct de l'object organisation.
+              type: string
+            statut:
+              $ref: '#/components/schemas/statutEnvironnement'
+            protection:
+              $ref: '#/components/schemas/protectionEnvironnement'
+            typeEnvironnement:
+              $ref: '#/components/schemas/typeEnvironnement'
+            instances:
+              type: array
+              items:
+                $ref: '#/components/schemas/instance'
+        instance:
+          description: une instance est la matérialisation d'une application sur un environnement d'exécution
+          type: object
+          properties:
+            environnement:
+              $ref: '#/components/schemas/environnement'
+            application:
+              $ref: '#/components/schemas/application'
+            role:
+              $ref: '#/components/schemas/instanceRole'
+            tenant:
+              type: string
+            FIP:
+              type: string
+            URL:
+              type: string
+            deploymentDate:
+              type: string
+              format: date
+            statut:
+              $ref: '#/components/schemas/instanceStatut'
+        capacite:
+          description: une capacité représente une fonction métier nécessaire à la réalisation des enjeux métiers
+          type: object
+          properties:
+            idCapacite:
+              description: identifiant interne de la capacité
+              type: string
+              format: uuid
+            parent:
+              $ref: '#/components/schemas/capacite'
+            enfants:
+              description: ensemble des sous-capacités
+              type: array
+              items:
+                $ref: '#/components/schemas/capacite'
+            description:
+              type: string
+            applications:
+              description: liste des applications réalisant cette capacité directement
+              type: array
+              items:
+                $ref: '#/components/schemas/application'
+        conformiteApplication:
+          type: object
+          properties:
+            typeConformite:
+              $ref: '#/components/schemas/typeConformite'
+            niveauConformite:
+              $ref: '#/components/schemas/niveauConformite'
+            dateDecision:
+              type: string
+              format: date
+            dateValidite:
+              type: string
+              format: date
+            dateAudit:
+              type: string
+              format: date
+            description:
+              type: string
+        zoneUrbanisme:
+          type: object
+          properties:
+            idZoneUrbanisme:
+              type: string
+              format: uuid
+            parent:
+              $ref: '#/components/schemas/zoneUrbanisme'
+            enfants:
+              type: array
+              items:
+                $ref: '#/components/schemas/zoneUrbanisme'
+            label:
+              type: string
+            description:
+              type: string
+            applications:
+              type: array
+              items:
+                $ref: '#/components/schemas/application'
+#
+# Schemas utilitaires
+#
+        errorMessage:
+            # QUESTION: dans yaml d'origine: l'objet contient ou sous-objet erreur; pourquoi ?
+            type: object
+            properties:
+                messageErreur:
+                    type: string
+                    description: libellé de l'erreur
+                codeErreur:
+                    type: string
+                    description: code de l'erreur
+#
+# Regroupement des ENUM pour faciliter la synchro manuelle avec les tables de 
+# référence de la base
+#
+        applicationStatut:  # Table de référence APP_Status
+          description: Statut des applications
+          type: string
+          enum:
+            - En construction
+            - En production
+            - Retirée du service
+            - Décommissionnée
+        applicationRole:     # Table de référence: ORG_RoleType
+          description: roles d'acteurs ou d'organismes sur une application ou un projet
+          type: string
+          enum:   # Table de référence: ORG_RoleType
+            - Chef de Projet/Product Owner
+            - MOA/Business Owner
+            - Architecte Solution
+            - Architecte Infra
+            - MOE
+            - Resp Production
+            - Support
+            - RSSI
+            - Souscripteur
+        applicationCodeType:  # Table de référence: APP_IdType
+          description: Type de codes applicatifs issus de référentiels externes
+          type: string
+          enum:
+            - PAI
+            - CANEL1
+        applicationType:  # Table de référence: APP_Type
+          type: string
+          description: type de l'application
+          enum:
+            - Site de communication Internet
+            - Site de communication Intranet
+            - Service métier
+            - Service transverse
+            - Service socle
+        applicationSensibilite: # Table de référence: REF_Sensitivity
+          type: string
+          description: sensibilité de l'application au regard du fonctionnement de l'organisation
+          enum:
+            - Standard
+            - Sensible
+            - Essentiel
+            - Importance vitale
+        flowDataOrientation: # TYPE SQL: APP_DATA_FLOW_ORIENT
+          type: string
+          enum:
+            - push
+            - pull
+        flowStatus: #TYPE SQL: APP_FLOW_STATUS
+          type: string
+          enum:
+            - actif
+            - inactif
+        typeEnvironnement:  # TYPE SQL: ENV_TYPE
+          type: string
+          default: Kubernetes
+          enum:
+            - Kubernetes
+            - OpenStack
+            - VSX
+            - Poste de travail
+            - Autre
+        statutEnvironnement:  # TYPE SQL : ENV_STATUS
+          type: string
+          default: actif
+          enum:
+            - en construction
+            - actif
+            - inactif
+        protectionEnvironnement:  # TYPE SQL : ENV_PROTECTION
+          type: string
+          default: S1
+          enum:
+            - S1
+            - S2
+            - S3
+            - S4
+        instanceRole: # Table Ref : APP_InstanceRole
+          type: string
+          enum:
+            - Consultation
+            - Développement
+            - Production
+            - Formation
+            - Intégration
+            - Formation Développement
+            - Homologation
+            - Livraison
+            - Métrologie
+            - Pré-production
+            - Qualification
+            - Référentiel
+            - Source
+            - Qualification technique
+            - Validation
+        instanceStatut: # Table ref: APP_InstanceStatus
+          type: string
+          default: Production
+          enum:
+            - Construction
+            - Production
+            - Retrait de service
+            - Décommissionnée
+        typeConformite: # Table ref: APP_ComplianceType
+          type: string
+          enum:
+            - SSI
+            - RGAA
+            - RGPD
+        niveauConformite: # TYPE SQL APP_COMPLIANCE_LEVEL
+          type: string
+          enum:
+            - Dispensée
+            - Non passée
+            - Partielle
+            - Complète
+            - Obsolète
