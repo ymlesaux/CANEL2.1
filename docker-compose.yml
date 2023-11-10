@@ -1,0 +1,42 @@
+version: '1.0'
+services:
+  pgsql:
+    container_name: postgresql
+    image: postgres:latest
+    restart: always
+    environment:
+      POSTGRES_USER: ymlesaux
+      POSTGRES_PASSWORD: erimel9801
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - postgres
+    volumes:
+      - pgsql:/var/lib/postgresql/data
+  pgadmin:
+    container_name: mypgadmin
+    image: dpage/pgadmin4:latest
+    depends_on:
+      - pgsql
+    environment:
+      PGADMIN_DEFAULT_EMAIL: pgadmin4@pgadmin.org
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DISABLE_POSTFIX: true
+      PGADMIN_PORT: 5050
+    ports:
+      - '5050:82'
+    volumes:
+      - pgadmin:/var/libpgadmin
+    networks:
+      - postgres
+    restart:
+      unless-stopped
+
+networks:
+  postgres:
+    driver: bridge
+
+volumes:
+  pgsql:
+  pgadmin:
