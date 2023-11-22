@@ -1,48 +1,62 @@
 const {pool} = require('./db')
 
-async function getOrganisations(pPool, pReq) {
-	var lBaseRqt = 'select * from ORG_organisationUnit'
-	var lReturn = []
+function getPagingParameters (pReq) {
+	let lRqt = ""
+	/* Complete the query with limit and offset to manage the pagination */
+	if ('maxPerPage' in pReq.query) {
+		let lLimit = parseInt(pReq.query.maxPerPage)
+		lRqt += " limit "+pReq.query.maxPerPage
+		if ('currentPage' in pReq.query) {
+			let lOffset = parseInt(pReq.query.currentPage)
+			if (lOffset > 1) {
+				lOffset = (lOffset-1) * lLimit
+				lRqt += " offset "+lOffset
+			} else {
+				lRqt += " offset 0"
+			}
+		}
+	}
 
-	/* Adapt the SQL query with filters */
-	var lRqt
+	return (lRqt)
+}
+
+function getOrganisationBuidQuery (pReq) {
+	let lBaseRqt = 'select * from ORG_organisationUnit'
+	let lCriteriaList = []
+
+	let lRqt
 	lRqt = lBaseRqt
 	if ('params' in pReq) {
-		if ('id' in pReq.params) {
-			if (lRqt === lBaseRqt) {
-				lRqt = lRqt + " where "
-			} else {
-				lRqt = lRqt + " and "
-			}
-			lRqt = lRqt + "organisationunitid='" + pReq.params.id + "'"
-		}
+		lCriteriaList.push("organisationunitid='" + pReq.params.id + "'")
 	}
 	if ('query' in pReq) {
 		if ('nom' in pReq.query) {
-			if (lRqt === lBaseRqt) {
-				lRqt = lRqt + " where "
-			} else {
-				lRqt = lRqt + " and "
-			}
-			lRqt = lRqt + "label='" + pReq.query.nom + "'"
+			lCriteriaList.push("label='" + pReq.query.nom + "'")
 		}
 		if ('code' in pReq.query) {
-			if (lRqt === lBaseRqt) {
-				lRqt = lRqt + " where "
-			} else {
-				lRqt = lRqt + " and "
-			}
-			lRqt = lRqt + "organisationCode='" + pReq.query.code + "'"
+			lCriteriaList.push("organisationCode='" + pReq.query.code + "'")
 		}
 		if ('noparent' in pReq.query) {
-			if (lRqt === lBaseRqt) {
-				lRqt = lRqt + " where "
-			} else {
-				lRqt = lRqt + " and "
-			}
-			lRqt = lRqt + "parentId is null"
+			lCriteriaList.push("parentId is null")
 		}
+		lCriteriaList.forEach ((pCriteria, pIndex) => {
+			if (lRqt === lBaseRqt) {
+				lRqt += " where "
+			} else {
+				lRqt += " and "
+			}
+			lRqt += pCriteria
+		})
 	}
+
+	return (lRqt)
+}
+
+async function getOrganisations(pPool, pReq) {
+	let lReturn = []
+	let lRqt = ""
+
+	lRqt = getOrganisationBuidQuery(pReq) + getPagingParameters(pReq)
 
 	/* Run the query */
 	console.log ("*** getOrganisations(): "+lRqt)
@@ -65,45 +79,62 @@ async function getOrganisations(pPool, pReq) {
 					/* console.log(lRow) */
 				})
 
-		}
-		finally {
+		} catch (err) {
+			console.error("Error executing query ("+lRqt+"): ", err)
+		} finally {
 			lClient.release()
 		}
-		} catch (err) {
-		console.error("Error executing query ("+lRqt+"): ", err)
+	} catch (errCnx) {
+		console.error ("getOrganisations() failed to connect to db: "+errCnx)
 	} finally {
-		pPool.end();
+		console.log ("getOrganisations() returns "+lReturn.length+" organisations")
 	}
-
-	console.log ("getOrganisations() returns "+lReturn.length+" organisations")
 	return (lReturn)	
 
 
 }
 
-async function testGetOrganisation() {
-	var lReq = { query: {}}
+async function postOrganisation (pPool, pReq) {
+	let lRqtFields = 'insert into ORG_organisationUnit ('
+	let lRqtValues = ') values ('
+	let lRqtClose = ')'
 
-	console.log ("*** Organisation avec code = 'MI' ***")
-	lReq.query.code = "DGGN"
+	/*
+	**	JSON Processing to get data to insert 
+	*/
+	let lPostedData = pReq.body
 
-	var lResults = await getOrganisations(pool, lReq)
-	console.log ("testGetOrganisation() received "+lResults.length+" organisations")
-	lResults.forEach ((pOrg, pIndex) => {
-		console.log("Org ["+pIndex+"]: "+JSON.stringify(pOrg))
-	})
-	
-	delete lReq.query.code
-/*
-	console.log ("*** Liste organisations racine ***")
-	lReq.query.noparent = true
-
-	var lResults2 = getOrganisations(pool, lReq)
-	for (let i=lResults2.length - 1; i>0 ; i--) {
-		console.log(JSON.stringify(lResults2[i]))
+	/* Mandatory fields from the YAML */
+	if ('nomApplication' in lPostedData) {
+		lRqtFields += "longName"
+		lRqtValues += '"'+lPostedData.nomApplication+'"'
+	} else {
+		throw new Error('Missing field "nomApplication" for application object')
 	}
-	delete lReq.query.noparent
-*/
+	if ('description' in lPostedData) {
+		lRqtFields += ", description"
+		lRqtValues += ', "'+lPostedData.description+'"'
+	} else {
+		throw new Error('Missing field "description" for application object')
+	}
+	if ('status' in lPostedData) {
+		lRqtFields += ", status"
+		lRqtValues += ', "'+lPostedData.status+'"'
+	} else {
+		throw new Error('Missing field "status" for application object')
+	}
+
+	/* Optional fields from the YAML */
+
+	/* Technical Fields */
+
+
+
+	/*
+	** Insert processing
+	*/
+	let lRqt = lRqtFields + lRqtValues + lRqtClose
+
 }
 
-testGetOrganisation()
+module.exports = { getOrganisations }
