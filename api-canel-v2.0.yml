@@ -3,7 +3,7 @@ info:
   title: API CANEL - (Cartographie des applications nationales et locales)
   description: "Cette API a pour but de présenter et gérer les informations du patrimoine de systèmes d'informations d'un organisme"
   contact:
-    email: contact-equipe-api@interieur.gouv.fr
+    email: ymlesaux@gmail.com
   license:
     name: Licence non soumise à contrôle
   version: 2.0.0
